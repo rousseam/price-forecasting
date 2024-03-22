@@ -12,4 +12,4 @@ if __name__ == '__main__':
     y_true = pd.DataFrame(data={'spot_id_delta': [1.4, 4, -2, -7.3]})
     y_pred = pd.DataFrame(data={'spot_id_delta': [1, -1, 1, -1]})
     result = weighted_accuracy(y_true, y_pred)
-    assert round(result, 2) == 0.21 
+    assert round(result, 2) == 0.21
