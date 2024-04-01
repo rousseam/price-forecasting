@@ -23,23 +23,19 @@ def date_stamp(df):
 
 X = date_stamp(X)
 X_rendu  = date_stamp(X_rendu)
+X = X.dropna(subset=['coal_power_available', 'gas_power_available', 'nucelear_power_available', 'wind_power_forecasts_average', 'solar_power_forecasts_average', 'wind_power_forecasts_std', 'solar_power_forecasts_std'])
+y = y.loc[X.index]
+
+
+threshold = 600
+indices_to_keep = abs(y['spot_id_delta']) < threshold
+X = X[indices_to_keep]
+y = y[indices_to_keep]
+
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
 
-#On spécifie dans quelle colonne on va chercher les valeurs manquantes (On perd 34 lignes)
-
-X_train_kept = X_train.dropna(subset=['coal_power_available', 'gas_power_available', 'nucelear_power_available', 'wind_power_forecasts_average', 'solar_power_forecasts_average', 'wind_power_forecasts_std', 'solar_power_forecasts_std'])
-X_rendu_kept = X_train.dropna(subset=['coal_power_available', 'gas_power_available', 'nucelear_power_available', 'wind_power_forecasts_average', 'solar_power_forecasts_average', 'wind_power_forecasts_std', 'solar_power_forecasts_std'])
-
-marked_train = pd.concat([X_train, X_train_kept]).drop_duplicates(keep=False)['DELIVERY_START']
-marked_rendu = pd.concat([X_rendu, X_rendu_kept]).drop_duplicates(keep=False)['DELIVERY_START']
-
-
-X_train = X_train[~X_train['DELIVERY_START'].isin(marked_train)]
-y_train = y_train[~y_train['DELIVERY_START'].isin(marked_train)]
-X_rendu = X_rendu[~X_rendu['DELIVERY_START'].isin(marked_train)]
-
-y_train.to_csv('data_analysis/data/y_train2.csv')
+#y_train.to_csv('data_analysis/data/y_train2.csv')
 
 #Représentation graphique 
 
@@ -48,15 +44,6 @@ y_train.to_csv('data_analysis/data/y_train2.csv')
 
 #sns.distplot(y_train['spot_id_delta'], color='g', bins=1000, hist_kws={'alpha': 0.4})
 #plt.show()
-
-threshold = 600
-
-eliminated_starts = y_train[abs(y_train['spot_id_delta']) - threshold >= 0].DELIVERY_START
-
-#print(eliminated_starts) #On enlève 3 valeurs
-
-y_train = y_train[~y_train['DELIVERY_START'].isin(eliminated_starts)] # on ne sélectionne que les valeurs qui ne correspondent pas aux dates enlevées
-X_train = X_train[~X_train['DELIVERY_START'].isin(eliminated_starts)] # de même ici pour être cohérent sur le nombre de lignes
 
 #Prédiction de load_forecast
 
@@ -74,13 +61,16 @@ X_load = X_load.loc[:, X_load.columns != 'load_forecast']
 
 X_train_load, X_test_load, y_train_load, y_test_load = train_test_split(X_load, y_load, test_size=0.3)
 
+print(X_train_load)
+print(y_train_load)
+
 # Données normalisées 
-X_train_scaled = X_train_load.drop(columns=['DELIVERY_START'])
-X_test_scaled = X_test_load.drop(columns=['DELIVERY_START'])
-scaler = StandardScaler()
-scaler.fit(X_train_scaled)
-X_train_scaled = scaler.transform(X_train_scaled)
-X_test_scaled = scaler.transform(X_test_scaled)
+#X_train_scaled = X_train_load.drop(columns=['DELIVERY_START'])
+#X_test_scaled = X_test_load.drop(columns=['DELIVERY_START'])
+#scaler = StandardScaler()
+#scaler.fit(X_train_scaled)
+#X_train_scaled = scaler.transform(X_train_scaled)
+#X_test_scaled = scaler.transform(X_test_scaled)
 
 #clf = LinearRegression()
 #lf.fit(X_train_load.set_index('DELIVERY_START'), y_train_load)
@@ -150,7 +140,6 @@ X_spot = X_train.dropna(subset=['predicted_spot_price'])
 X_spot = X_spot.loc[:, X_spot.columns != 'predicted_spot_price']
 X_spot = X_spot.set_index('DELIVERY_START')
 
-print('nombre de valeurs non NaN: ', len(y_spot))
 
 X_train_spot, X_test_spot, y_train_spot, y_test_spot = train_test_split(X_spot, y_spot, test_size=0.5)
 
@@ -193,5 +182,9 @@ X_predict_rendu.insert(8, 'predicted_spot_price', clf_gb.predict(X_predict_rendu
 X_train = pd.concat([X_train[~X_train['predicted_spot_price'].isna()], X_predict_spot.reset_index('DELIVERY_START')])
 X_rendu = pd.concat([X_rendu[~X_rendu['predicted_spot_price'].isna()], X_predict_rendu.reset_index('DELIVERY_START')])
 
+X_train = X_train.sort_values(by='DELIVERY_START')
+X_rendu = X_train.sort_values(by='DELIVERY_START')
+y_train = y_train.sort_values(by='DELIVERY_START')
 X_train.to_csv('data_analysis/data/X_train2.csv')
 X_rendu.to_csv('data_analysis/data/X_test2.csv')
+y_train.to_csv('data_analysis/data/y_train2.csv')
